@@ -1,0 +1,106 @@
+
+1.Program to observe Open data path(ODP) not shared by default 
+
+ SEU==>                                                                 CALLED1
+ FMT FX FFilename++IPEASF.....L.....A.Device+.Keywords+++++++++++++++++++++++++
+        *************** Beginning of data *************************************
+0001.00 FEMPMAIN   IF   E             DISK                                     
+0002.00 DRRN              S              3P 0 INZ(10)                          
+0003.00 C     RRN           CHAIN     EMPREC                                   
+0004.00 C     EMPID         DSPLY                                              
+0005.00 C                   EVAL      *INLR=*ON                                
+        ****************** End of data ****************************************  
+
+ SEU==>                                                                 CALLER1
+ FMT FX FFilename++IPEASF.....L.....A.Device+.Keywords++++++++++++++++++++++++
+        *************** Beginning of data ************************************
+0002.00 FEMPMAIN   IF   E             DISK                                    
+0002.01 C                   READ      EMPREC                                  
+0003.00 C     EMPID         DSPLY                                             
+0004.00 C                   CALL      'CALLED1'                               
+0005.00 C                   READ      EMPREC                                  
+0006.00 C     EMPID         DSPLY                                             
+0007.00 C                   EVAL      *INLR=*ON                               
+        ****************** End of data **************************************
+
+2. Shared ODP, observe with rec-pointer in RPGLE
+ SEU==>                                                                CALLERCL
+ FMT **  ...+... 1 ...+... 2 ...+... 3 ...+... 4 ...+... 5 ...+... 6 ...+... 7 
+        *************** Beginning of data *************************************
+0001.00 PGM                                                                    
+0002.00              OVRDBF     FILE(EMPMAIN) SHARE(*YES)                      
+0003.00              CALL       PGM(TEN30LIB/CALLER1)                          
+0004.00              DLTOVR     FILE(EMPMAIN)                                  
+0005.00 ENDPGM                                                                 
+        ****************** End of data ****************************************
+
+3.Query builder using OVRBDF & OPNQRYF    
+ SEU==>                                                                 QRYBLDC
+ FMT **  ...+... 1 ...+... 2 ...+... 3 ...+... 4 ...+... 5 ...+... 6 ...+... 7 
+        *************** Beginning of data *************************************
+0001.00 PGM                                                                    
+0002.00              DCLF       FILE(*CURLIB/QRYBLDD)                          
+0003.00              DCL VAR(&QRY) TYPE(*CHAR) LEN(50)                         
+0004.00              DCL VAR(&ORDER) TYPE(*CHAR) LEN(8) VALUE('*ASCEND')       
+0004.01              OVRDBF     FILE(EMPMAIN) SHARE(*YES)                      
+0005.00              DOWHILE COND(&IN03='0')                                   
+0006.00              SNDRCVF RCDFMT(QRYENT)                                    
+0006.01              IF COND(&IN03='1') THEN(LEAVE)                            
+0007.00              IF COND(&IN04='1') THEN(DO)                               
+0008.00              CHGVAR VAR(&QRY) VALUE(&FLD *BCAT &OPR *BCAT &VAL)        
+0008.01              CHGVAR VAR(&ORDER) VALUE('*ASCEND')                       
+0009.00              IF COND(&ORD='D') THEN(CHGVAR VAR(&ORDER) +               
+0010.00              VALUE('*DESCEND'))                                        
+0011.00              OPNQRYF    FILE((*CURLIB/EMPMAIN)) QRYSLT(&QRY) +         
+0012.00                           KEYFLD((&KEY &ORDER))                        
+0013.00              CALL       PGM(*CURLIB/EMPSFLR)
+0014.00              CLOF       OPNID(EMPMAIN)                               
+0015.00              ENDDO                                                   
+0016.00              ENDDO                                                   
+0017.00 ENDPGM                                                               
+        ****************** End of data **************************************  
+   
+4. Calculator : warning message when a number divide by zero
+
+ SEU==>                                                                   CALCC
+ FMT **  ...+... 1 ...+... 2 ...+... 3 ...+... 4 ...+... 5 ...+... 6 ...+... 7 
+        *************** Beginning of data *************************************
+0001.00 PGM                                                                    
+0002.00              DCLF       FILE(*CURLIB/CALCD)                            
+0003.00              DOWHILE COND(&IN53='0')                                   
+0004.00              SNDRCVF    RCDFMT(NUMENT)                                 
+0005.00              IF COND(&IN53='1') THEN(LEAVE)                            
+0006.00              IF         COND(&OPT = 'A') THEN(CHGVAR VAR(&C) +         
+0007.00                           VALUE(&A + &B))                              
+0008.00              IF         COND(&OPT = 'S') THEN(CHGVAR VAR(&C) +         
+0009.00                           VALUE(&A - &B))                              
+0009.01              IF         COND(&OPT = 'M') THEN(CHGVAR VAR(&C) +         
+0009.02                           VALUE(&A * &B))                              
+0009.03              IF         COND(&OPT = 'D') THEN(DO)                      
+0009.05                           CHGVAR VAR(&C) VALUE(&A / &B)                
+0009.06              MONMSG     MSGID(MCH1211) EXEC(DO)                        
+0009.07              CHGVAR VAR(&MSG) VALUE('INVALID DIVISION BY ZERO')        
+0009.07              CHGVAR VAR(&MSG) VALUE('INVALID DIVISION BY ZERO')      
+0009.08              ITERATE                                                 
+0010.00              ENDDO                                                   
+0010.01              ENDDO                                                   
+0010.02              ENDDO                                                   
+0011.00 ENDPGM                                                               
+        ****************** End of data **************************************
+                                                                            
+5. Retrive % change values of Data area
+
+ SEU==>                                                              WITHDTARAC
+ FMT **  ...+... 1 ...+... 2 ...+... 3 ...+... 4 ...+... 5 ...+... 6 ...+... 7 
+        *************** Beginning of data *************************************
+0001.00 PGM                                                                    
+0002.00    DCL VAR(&DTA) TYPE(*DEC) LEN(5 0)                                   
+0002.01    DCL VAR(&CHDTA) TYPE(*CHAR) LEN(5)                                  
+0003.00              RTVDTAARA  DTAARA(*CURLIB/SJDTA) RTNVAR(&DTA)             
+0004.00              CHGVAR VAR(&DTA) VALUE(&DTA + 1)                          
+0005.00              CHGDTAARA  DTAARA(*CURLIB/SJDTA) VALUE(&DTA)              
+0006.00              CHGVAR VAR(&CHDTA) VALUE(&DTA)                            
+0007.00    SNDPGMMSG MSG(&CHDTA)                                               
+0008.00 ENDPGM                                                                 
+        ****************** End of data ****************************************                     
+                                                                         
